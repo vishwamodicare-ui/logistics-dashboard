@@ -2,18 +2,8 @@ import os
 import pandas as pd
 import streamlit as st
 
-# -----------------------------
-# App config
-# -----------------------------
-st.set_page_config(
-    page_title="Logistics Insights Dashboard",
-    page_icon="📦",
-    layout="wide"
-)
+st.set_page_config(page_title="Logistics Insights Dashboard", page_icon="📦", layout="wide")
 
-# -----------------------------
-# File mapping
-# -----------------------------
 BASE_DIR = os.path.dirname(__file__)
 
 FILES = {
@@ -22,44 +12,37 @@ FILES = {
     "LMD Insights": "lmd_insights.xlsx",
 }
 
-# -----------------------------
-# Load all sheets from Excel
-# -----------------------------
 @st.cache_data
 def load_excel_all_sheets(file_name):
+    """Load ALL sheet names explicitly, even hidden/empty ones."""
     path = os.path.join(BASE_DIR, file_name)
     if not os.path.exists(path):
         return {}
-    # Load all sheets, even empty ones
-    xls = pd.ExcelFile(path)
+    xls = pd.ExcelFile(path, engine="openpyxl")  # force openpyxl for modern Excel
     sheets = {}
-    for sheet in xls.sheet_names:
+    for sheet in xls.sheet_names:   # loop through every sheet name
         try:
-            df = pd.read_excel(xls, sheet_name=sheet)
+            df = pd.read_excel(xls, sheet_name=sheet, engine="openpyxl")
             sheets[sheet] = df
         except Exception as e:
+            # If sheet is empty or unreadable, still include it
             sheets[sheet] = pd.DataFrame({"Error": [str(e)]})
     return sheets
 
 # -----------------------------
-# Sidebar controls
+# Sidebar
 # -----------------------------
 st.sidebar.header("Controls")
 
-# Step 1: Choose report (file)
 report = st.sidebar.selectbox("Select Report", list(FILES.keys()))
-
-# Step 2: Load all sheets for that file
 sheets = load_excel_all_sheets(FILES[report])
 
 if not sheets:
     st.error(f"No sheets found in {FILES[report]}")
     st.stop()
 
-# Step 3: Choose sheet from dropdown (all sheet names will appear)
+# ✅ Dropdown will now list *all* sheet names
 sheet_name = st.sidebar.selectbox("Select Sheet", list(sheets.keys()))
-
-# Step 4: Get the selected sheet’s DataFrame
 df = sheets[sheet_name]
 
 # -----------------------------
@@ -68,7 +51,6 @@ df = sheets[sheet_name]
 st.title("📊 Logistics Insights Dashboard")
 st.caption(f"{report} → {sheet_name}")
 
-# KPIs if numeric columns exist
 num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
 if num_cols:
     cols = st.columns(min(4, len(num_cols)))
@@ -76,7 +58,6 @@ if num_cols:
         with cols[i]:
             st.metric(col, f"{df[col].sum():,.0f}")
 
-# Tabs for Summary and Raw Data
 tab1, tab2 = st.tabs(["📈 Summary", "📋 Raw Data"])
 
 with tab1:
