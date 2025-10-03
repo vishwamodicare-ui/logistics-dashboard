@@ -28,6 +28,7 @@ def load_excel_all_sheets(file_name):
             # If sheet is empty or unreadable, still include it
             sheets[sheet] = pd.DataFrame({"Error": [str(e)]})
     return sheets
+st.sidebar.write("📋 Detected sheets:", list(sheets.keys()))
 
 # -----------------------------
 # Sidebar
