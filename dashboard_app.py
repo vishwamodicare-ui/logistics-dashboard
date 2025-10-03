@@ -2,63 +2,35 @@ import os
 import pandas as pd
 import streamlit as st
 
-# ----------------------------
-# 1) Configuration
-# ----------------------------
-BASE_PATH = r"C:\python\output"
+# Get the folder where this script is running
+BASE_DIR = os.path.dirname(__file__)
 
-# Explicit mapping of your three files
-REPORTS = {
-    "City Level Analysis": os.path.join(BASE_PATH, "city level analysis.xlsx"),
-    "Delivery Analysis":   os.path.join(BASE_PATH, "delivery_analysis.xlsx"),
-    "LMD Insights":        os.path.join(BASE_PATH, "lmd_insights.xlsx"),
-}
+# Build file paths relative to the app folder
+city_file = os.path.join(BASE_DIR, "city level analysis.xlsx")
+delivery_file = os.path.join(BASE_DIR, "delivery_analysis.xlsx")
+lmd_file = os.path.join(BASE_DIR, "lmd_insights.xlsx")
 
-# ----------------------------
-# 2) Streamlit UI
-# ----------------------------
-st.set_page_config(page_title="Logistics Insights Dashboard", layout="wide")
-st.title("📊 Logistics Insights Dashboard")
+# Load the Excel files
+df_city = pd.read_excel(city_file)
+df_delivery = pd.read_excel(delivery_file)
+df_lmd = pd.read_excel(lmd_file)
 
-# Sidebar navigation
-report_choice = st.sidebar.radio("Select Report", list(REPORTS.keys()))
-file_path = REPORTS[report_choice]
+# Example Streamlit UI
+st.title("Logistics Insights Dashboard")
 
-st.subheader(f"Report: {report_choice}")
-st.caption(file_path)
+report = st.sidebar.selectbox(
+    "Select Report",
+    ["City Level Analysis", "Delivery Analysis", "LMD Insights"]
+)
 
-if not os.path.exists(file_path):
-    st.error(f"File not found: {file_path}")
-else:
-    try:
-        # Load Excel and list sheets
-        xls = pd.ExcelFile(file_path)
-        sheet_choice = st.selectbox("Select Sheet", xls.sheet_names)
+if report == "City Level Analysis":
+    st.subheader("City Level Analysis")
+    st.dataframe(df_city)
 
-        df = pd.read_excel(file_path, sheet_name=sheet_choice)
-        st.dataframe(df, use_container_width=True)
+elif report == "Delivery Analysis":
+    st.subheader("Delivery Analysis")
+    st.dataframe(df_delivery)
 
-        # KPI metrics if available
-        kpi_cols = [c for c in ["On-Time %", "Delayed Non-NDR %", "NDR %"] if c in df.columns]
-        if kpi_cols:
-            st.markdown("### Key Metrics")
-            cols = st.columns(len(kpi_cols))
-            for i, col in enumerate(kpi_cols):
-                try:
-                    val = df[col].iloc[0]
-                except Exception:
-                    val = "-"
-                cols[i].metric(col, val)
-
-        # Quick charts
-        if "Total AWBs" in df.columns:
-            st.markdown("### Total AWBs by Group")
-            st.bar_chart(df.set_index(df.columns[0])["Total AWBs"])
-
-        if "On-Time %" in df.columns:
-            st.markdown("### On-Time % by Group")
-            vals = df["On-Time %"].astype(str).str.rstrip("%").astype(float)
-            st.bar_chart(pd.DataFrame({"On-Time %": vals.values}, index=df[df.columns[0]]))
-
-    except Exception as e:
-        st.error(f"Error reading {file_path}: {e}")
+elif report == "LMD Insights":
+    st.subheader("LMD Insights")
+    st.dataframe(df_lmd)
