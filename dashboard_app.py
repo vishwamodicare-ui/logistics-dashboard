@@ -36,6 +36,7 @@ st.sidebar.header("Controls")
 
 report = st.sidebar.selectbox("Select Report", list(FILES.keys()))
 sheets = load_excel_all_sheets(FILES[report])
+st.sidebar.write("📋 Detected sheets:", list(sheets.keys()))
 
 if not sheets:
     st.error(f"No sheets found in {FILES[report]}")
