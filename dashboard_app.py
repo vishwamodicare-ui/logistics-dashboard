@@ -36,9 +36,9 @@ def load_excel_all_sheets(file_name):
         for sheet in xls.sheet_names:
             try:
                 df = pd.read_excel(xls, sheet_name=sheet, engine="openpyxl")
-                sheets[sheet] = df
+                sheets[sheet.strip()] = df  # strip spaces from sheet names
             except Exception as e:
-                sheets[sheet] = pd.DataFrame({"Error": [str(e)]})
+                sheets[sheet.strip()] = pd.DataFrame({"Error": [str(e)]})
         return sheets
     except Exception as e:
         return {}
@@ -57,12 +57,10 @@ sheets = load_excel_all_sheets(FILES[report])
 # Step 3: Debug panel
 with st.sidebar.expander("🛠 Debug Info", expanded=True):
     st.write("📋 Detected sheets:", list(sheets.keys()))
+    st.write(f"✅ Total sheets loaded: {len(sheets)}")
 
-# Step 4: Sheet dropdown (only if sheets exist)
-if sheets:
-    sheet_name = st.sidebar.selectbox("Select Sheet", list(sheets.keys()))
-    df = sheets[sheet_name]
-else:
+# Step 4: Stop if no sheets found
+if not sheets:
     st.sidebar.warning("⚠️ No sheets found in this file.")
     st.stop()
 
@@ -70,26 +68,34 @@ else:
 # Main UI
 # -----------------------------
 st.title("📊 Logistics Insights Dashboard")
-st.caption(f"{report} → {sheet_name}")
+st.caption(f"{report} — {len(sheets)} sheets")
 
-# KPIs if numeric columns exist
-num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
-if num_cols:
-    cols = st.columns(min(4, len(num_cols)))
-    for i, col in enumerate(num_cols[:4]):
-        with cols[i]:
-            st.metric(col, f"{df[col].sum():,.0f}")
+# Create tabs for each sheet
+sheet_tabs = st.tabs(list(sheets.keys()))
 
-# Tabs for Summary and Raw Data
-tab1, tab2 = st.tabs(["📈 Summary", "📋 Raw Data"])
+for tab, sheet_name in zip(sheet_tabs, sheets.keys()):
+    df = sheets[sheet_name]
+    with tab:
+        st.subheader(f"📄 Sheet: {sheet_name}")
 
-with tab1:
-    st.subheader("Quick Summary")
-    if num_cols:
-        st.bar_chart(df[num_cols[0]])
-    else:
-        st.info("No numeric columns to chart.")
+        # KPIs if numeric columns exist
+        num_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
+        if num_cols:
+            cols = st.columns(min(4, len(num_cols)))
+            for i, col in enumerate(num_cols[:4]):
+                with cols[i]:
+                    st.metric(col, f"{df[col].sum():,.0f}")
 
-with tab2:
-    st.subheader("Raw Data")
-    st.dataframe(df, use_container_width=True)
+        # Tabs for Summary and Raw Data
+        subtab1, subtab2 = st.tabs(["📈 Summary", "📋 Raw Data"])
+
+        with subtab1:
+            st.subheader("Quick Summary")
+            if num_cols:
+                st.bar_chart(df[num_cols[0]])
+            else:
+                st.info("No numeric columns to chart.")
+
+        with subtab2:
+            st.subheader("Raw Data")
+            st.dataframe(df, use_container_width=True)
