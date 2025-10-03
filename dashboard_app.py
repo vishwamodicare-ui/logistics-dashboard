@@ -30,8 +30,16 @@ def load_excel_all_sheets(file_name):
     path = os.path.join(BASE_DIR, file_name)
     if not os.path.exists(path):
         return {}
-    # sheet_name=None loads ALL sheets into a dict
-    return pd.read_excel(path, sheet_name=None)
+    # Load all sheets, even empty ones
+    xls = pd.ExcelFile(path)
+    sheets = {}
+    for sheet in xls.sheet_names:
+        try:
+            df = pd.read_excel(xls, sheet_name=sheet)
+            sheets[sheet] = df
+        except Exception as e:
+            sheets[sheet] = pd.DataFrame({"Error": [str(e)]})
+    return sheets
 
 # -----------------------------
 # Sidebar controls
@@ -48,7 +56,7 @@ if not sheets:
     st.error(f"No sheets found in {FILES[report]}")
     st.stop()
 
-# Step 3: Choose sheet from dropdown
+# Step 3: Choose sheet from dropdown (all sheet names will appear)
 sheet_name = st.sidebar.selectbox("Select Sheet", list(sheets.keys()))
 
 # Step 4: Get the selected sheet’s DataFrame
@@ -74,7 +82,6 @@ tab1, tab2 = st.tabs(["📈 Summary", "📋 Raw Data"])
 with tab1:
     st.subheader("Quick Summary")
     if num_cols:
-        # Show bar chart of first numeric column
         st.bar_chart(df[num_cols[0]])
     else:
         st.info("No numeric columns to chart.")
